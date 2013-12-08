@@ -118,6 +118,61 @@ class GotoDocumentationCommand(sublime_plugin.TextCommand):
     def perl_doc(self, keyword, scope):
         open_url("http://perldoc.perl.org/search.html?q=%s" % keyword)
 
+    def autoit_doc(self, keyword, scope):
+        scopes = scope.split()
+
+        if scope.split()[1] == "keyword.control.autoit":
+            path = "keywords"
+        elif any("support.function.autoit" in s for s in scopes):
+            path = "functions"
+        elif any("support.function.other.autoit" in s for s in scopes):
+            path = "libfunctions"
+        elif any("support.type.macro.autoit" in s for s in scopes):
+            path = "macros"
+        elif any("keyword.control.import.autoit" in s for s in scopes):
+            path = "keywords"
+        elif any("keyword.control.directives.autoit" in s for s in scopes):
+            path = "keywords"
+        elif any("comment.block.cs.autoit" in s for s in scopes):
+            path = "keywords"
+            keyword = keyword.replace("cs", "comments-start").replace("ce", "comments-start")
+        elif any("comment.block.comments-start.autoit" in s for s in scopes):
+            path = "keywords"
+            keyword = keyword.replace("comments-end", "comments-start")
+        elif any("comment.line.semicolon.autoit" in s for s in scopes):
+            path = None
+        elif any("variable.other.autoit" in s for s in scopes):
+            path = None
+        elif any("constant.numeric.autoit" in s for s in scopes):
+            path = None
+        elif any("keyword.operator.assignment.autoit" in s for s in scopes):
+            path = "intro"
+            keyword = "lang_operators"
+        elif any("keyword.operator.arithmetic.autoit" in s for s in scopes):
+            path = "intro"
+            keyword = "lang_operators"
+        elif any("keyword.operator.comparison.autoit" in s for s in scopes):
+            path = "intro"
+            keyword = "lang_operators"
+        elif any("keyword.operator.logical.autoit" in s for s in scopes):
+            path = "intro"
+            keyword = "lang_operators"
+        elif any("punctuation.bracket.autoit" in s for s in scopes):
+            path = None
+        elif any("keyword.control.underscore.autoit" in s for s in scopes):
+            path = None
+        elif any("constant.other.send-key.autoit" in s for s in scopes):
+            path = "functions"
+            keyword = "Send"
+
+        if path:
+            if path == "macros":
+                open_url("http://www.autoitscript.com/autoit3/docs/%s.htm" % path)
+            else:
+                open_url("http://www.autoitscript.com/autoit3/docs/%s/%s.htm" % (path, keyword))
+        else:
+            open_url("https://www.google.com/search?q=site%%3Ahttp%%3A%%2F%%2Fwww.autoitscript.com%%2Fautoit3%%2Fdocs+%s" % keyword)
+
     def run_command(self, command, callback=None, **kwargs):
         if not callback:
             callback = self.panel
