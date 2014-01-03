@@ -13,7 +13,6 @@ import sublime_plugin
 def open_url(url):
     sublime.active_window().run_command('open_url', {"url": url})
 
-
 def main_thread(callback, *args, **kwargs):
     # sublime.set_timeout gets used to send things onto the main thread
     # most sublime.[something] calls need to be on the main thread
@@ -35,6 +34,60 @@ def _make_text_safeish(text, fallback_encoding, method='decode'):
         unitext = str(text)
     return unitext
 
+def parse_autoit_keyword(self, keyword, scope):
+    scopes = scope.split()
+
+    if scope.split()[1] == "keyword.control.autoit":
+        path = "keywords"
+    elif any("support.function.autoit" in s for s in scopes):
+        path = "functions"
+    elif any("support.function.other.autoit" in s for s in scopes):
+        path = "libfunctions"
+    elif any("support.type.macro.autoit" in s for s in scopes):
+        path = "macros"
+    elif any("keyword.control.import.autoit" in s for s in scopes):
+        path = "keywords"
+    elif any("keyword.control.directives.autoit" in s for s in scopes):
+        path = "keywords"
+    elif any("comment.block.cs.autoit" in s for s in scopes):
+        path = "keywords"
+        keyword = keyword.replace("cs", "comments-start").replace("ce", "comments-start")
+    elif any("comment.block.comments-start.autoit" in s for s in scopes):
+        path = "keywords"
+        keyword = keyword.replace("comments-end", "comments-start")
+    elif any("comment.line.semicolon.autoit" in s for s in scopes):
+        path = None
+    elif any("variable.other.autoit" in s for s in scopes):
+        path = None
+    elif any("constant.numeric.autoit" in s for s in scopes):
+        path = None
+    elif any("keyword.operator.assignment.autoit" in s for s in scopes):
+        path = "intro"
+        keyword = "lang_operators"
+    elif any("keyword.operator.arithmetic.autoit" in s for s in scopes):
+        path = "intro"
+        keyword = "lang_operators"
+    elif any("keyword.operator.comparison.autoit" in s for s in scopes):
+        path = "intro"
+        keyword = "lang_operators"
+    elif any("keyword.operator.logical.autoit" in s for s in scopes):
+        path = "intro"
+        keyword = "lang_operators"
+    elif any("punctuation.bracket.autoit" in s for s in scopes):
+        path = None
+    elif any("keyword.control.underscore.autoit" in s for s in scopes):
+        path = None
+    elif any("constant.other.send-key.autoit" in s for s in scopes):
+        path = "functions"
+        keyword = "Send"
+
+    if path:
+        if path == "macros":
+            open_url("http://www.autoitscript.com/autoit3/docs/%s.htm" % path)
+        else:
+            open_url("http://www.autoitscript.com/autoit3/docs/%s/%s.htm" % (path, keyword))
+    else:
+        open_url("https://www.google.com/search?q=site%%3Ahttp%%3A%%2F%%2Fwww.autoitscript.com%%2Fautoit3%%2Fdocs+%s" % keyword)
 
 class CommandThread(threading.Thread):
     def __init__(self, command, on_done, working_dir="", fallback_encoding=""):
@@ -71,6 +124,8 @@ class GotoDocumentationCommand(sublime_plugin.TextCommand):
                 scope = self.view.scope_name(word.begin()).strip()
                 extracted_scope = scope.rpartition('.')[2]
                 keyword = self.view.substr(word)
+                if "source.pde" in scope:
+                    extracted_scope = "processing"
                 getattr(self, '%s_doc' % extracted_scope, self.unsupported)(keyword, scope)
 
     def unsupported(self, keyword, scope):
@@ -79,6 +134,12 @@ class GotoDocumentationCommand(sublime_plugin.TextCommand):
     def php_doc(self, keyword, scope):
         open_url("http://php.net/%s" % keyword)
 
+    def ahk_doc(self, keyword, scope):
+        open_url("http://www.autohotkey.com/docs/commands/%s.htm" % keyword)
+
+    def processing_doc(self, keyword, scope):
+        open_url("http://www.processing.org/reference/%s_" % keyword + ".html")
+
     def rails_doc(self, keyword, scope):
         open_url("http://api.rubyonrails.org/?q=%s" % keyword)
 
@@ -86,7 +147,7 @@ class GotoDocumentationCommand(sublime_plugin.TextCommand):
         open_url("http://api.rubyonrails.org/?q=%s" % keyword)
 
     def ruby_doc(self, keyword, scope):
-        open_url("http://api.rubyonrails.org/?q=%s" % keyword)
+        open_url("http://ruby-doc.com/search.html?q=%s" % keyword)
 
     def js_doc(self, keyword, scope):
         open_url("https://developer.mozilla.org/en-US/search?q=%s" % keyword)
@@ -118,60 +179,14 @@ class GotoDocumentationCommand(sublime_plugin.TextCommand):
     def perl_doc(self, keyword, scope):
         open_url("http://perldoc.perl.org/search.html?q=%s" % keyword)
 
+    def cs_doc(self, keyword, scope):
+        open_url("http://social.msdn.microsoft.com/Search/?query=%s" % keyword)
+
+    def lua_doc(self, keyword, scope):
+        open_url('http://pgl.yoyo.org/luai/i/%s' % keyword)
+
     def autoit_doc(self, keyword, scope):
-        scopes = scope.split()
-
-        if scope.split()[1] == "keyword.control.autoit":
-            path = "keywords"
-        elif any("support.function.autoit" in s for s in scopes):
-            path = "functions"
-        elif any("support.function.other.autoit" in s for s in scopes):
-            path = "libfunctions"
-        elif any("support.type.macro.autoit" in s for s in scopes):
-            path = "macros"
-        elif any("keyword.control.import.autoit" in s for s in scopes):
-            path = "keywords"
-        elif any("keyword.control.directives.autoit" in s for s in scopes):
-            path = "keywords"
-        elif any("comment.block.cs.autoit" in s for s in scopes):
-            path = "keywords"
-            keyword = keyword.replace("cs", "comments-start").replace("ce", "comments-start")
-        elif any("comment.block.comments-start.autoit" in s for s in scopes):
-            path = "keywords"
-            keyword = keyword.replace("comments-end", "comments-start")
-        elif any("comment.line.semicolon.autoit" in s for s in scopes):
-            path = None
-        elif any("variable.other.autoit" in s for s in scopes):
-            path = None
-        elif any("constant.numeric.autoit" in s for s in scopes):
-            path = None
-        elif any("keyword.operator.assignment.autoit" in s for s in scopes):
-            path = "intro"
-            keyword = "lang_operators"
-        elif any("keyword.operator.arithmetic.autoit" in s for s in scopes):
-            path = "intro"
-            keyword = "lang_operators"
-        elif any("keyword.operator.comparison.autoit" in s for s in scopes):
-            path = "intro"
-            keyword = "lang_operators"
-        elif any("keyword.operator.logical.autoit" in s for s in scopes):
-            path = "intro"
-            keyword = "lang_operators"
-        elif any("punctuation.bracket.autoit" in s for s in scopes):
-            path = None
-        elif any("keyword.control.underscore.autoit" in s for s in scopes):
-            path = None
-        elif any("constant.other.send-key.autoit" in s for s in scopes):
-            path = "functions"
-            keyword = "Send"
-
-        if path:
-            if path == "macros":
-                open_url("http://www.autoitscript.com/autoit3/docs/%s.htm" % path)
-            else:
-                open_url("http://www.autoitscript.com/autoit3/docs/%s/%s.htm" % (path, keyword))
-        else:
-            open_url("https://www.google.com/search?q=site%%3Ahttp%%3A%%2F%%2Fwww.autoitscript.com%%2Fautoit3%%2Fdocs+%s" % keyword)
+        parse_autoit_keyword(self, keyword, scope)
 
     def run_command(self, command, callback=None, **kwargs):
         if not callback:
